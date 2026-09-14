@@ -30,7 +30,7 @@ RSpec.describe "inline create work package", :js do
     login_as user
   end
 
-  shared_examples "inline create work package" do |test_filtered_custom_field: true|
+  shared_examples "inline create work package" do
     context "when user may create work packages" do
       it "allows to create work packages" do
         wp_table.expect_work_package_listed(existing_wp)
@@ -75,7 +75,7 @@ RSpec.describe "inline create work package", :js do
       end
     end
 
-    context "when having filtered by custom field and switching to that type", if: test_filtered_custom_field do
+    context "when having filtered by custom field and switching to that type" do
       let(:cf_list) do
         create(:list_wp_custom_field, is_for_all: true, is_filter: true)
       end
@@ -131,7 +131,7 @@ RSpec.describe "inline create work package", :js do
       wp_table.visit!
     end
 
-    it_behaves_like "inline create work package", test_filtered_custom_field: false do
+    it_behaves_like "inline create work package" do
       let(:callback) do
         -> {
           # Set project which will also select the type (first one in the selected project)
