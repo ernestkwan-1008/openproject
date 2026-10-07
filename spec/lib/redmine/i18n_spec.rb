@@ -34,10 +34,9 @@ module OpenProject
   RSpec.describe I18n, type: :helper do
     include Redmine::I18n
 
-    let(:format) { "%d/%m/%Y" }
-    let(:user) { build_stubbed(:user) }
-
     describe "#format_date with time" do
+      let(:format) { "%d/%m/%Y" }
+
       current_user { build_stubbed(:user, preferences: { time_zone: user_time_zone }) }
 
       describe "with user time zone" do
@@ -228,15 +227,13 @@ module OpenProject
     end
 
     describe "link_translation" do
-      let(:urls) do
-        { url_1: "http://openproject.com/foo", url_2: "/baz" }
-      end
+      let(:urls) { { url1: "http://openproject.com/foo", url2: "/baz" } }
 
       before do
         allow(::I18n)
           .to receive(:translate)
           .with("translation_with_a_link", *any_args)
-          .and_return("There is a [link](url_1) in this translation! Maybe even [two](url_2)?")
+          .and_return("There is a [link](url1) in this translation! Maybe even [two](url2)?")
       end
 
       it "allows to insert links into translations" do
@@ -273,9 +270,7 @@ module OpenProject
       end
 
       context "when passing URLs as a list of symbols" do
-        let(:urls) do
-          { url_1: [:a, :b], url_2: [:a, :c] }
-        end
+        let(:urls) { { url1: %i[a b], url2: %i[a c] } }
 
         before do
           allow(OpenProject::Static::Links).to receive(:url_for).and_return("/no-args")
@@ -302,15 +297,15 @@ module OpenProject
     describe "#format_date" do
       context "without a date_format setting", with_settings: { date_format: "" } do
         it "uses the locale formate" do
-          expect(format_date(Date.today))
-            .to eql described_class.l(Date.today)
+          expect(format_date(Time.zone.today))
+            .to eql described_class.l(Time.zone.today)
         end
       end
 
       context "with a date_format setting", with_settings: { date_format: "%d %m %Y" } do
         it "adheres to the format" do
-          expect(format_date(Date.today))
-            .to eql Date.today.strftime("%d %m %Y")
+          expect(format_date(Time.zone.today))
+            .to eql Time.zone.today.strftime("%d %m %Y")
         end
 
         context "with a date_format preference" do
@@ -327,7 +322,7 @@ module OpenProject
         context "for lang #{lang}" do
           it "raises no error" do
             described_class.with_locale lang do
-              expect { format_date(Date.today) }
+              expect { format_date(Time.zone.today) }
                 .not_to raise_error
             end
           end
@@ -592,7 +587,7 @@ module OpenProject
         context "for locale #{lang}" do
           it "is not 'default' for a date" do
             described_class.with_locale lang do
-              expect(described_class.l(Date.today, format: :default))
+              expect(described_class.l(Time.zone.today, format: :default))
                 .not_to eq "default"
             end
           end
