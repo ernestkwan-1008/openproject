@@ -3702,6 +3702,10 @@ en:
       leave_project: "Leave project"
       no_favorite_projects: "You have no favorite projects."
       title: "Projects"
+    whats_new:
+      title: "What's new in %{version}"
+      unread: "Unread"
+      view_release_video: "View release video"
 
   health_reports:
     common:
@@ -3744,6 +3748,30 @@ en:
       community: "OpenProject community"
       new_features:
         # We need to include the version to invalidate outdated translations in other locales
+        "18_0":
+          whats_new:
+            video_url: "https://www.youtube.com/c/OpenProjectCommunity"
+            items:
+              type_variants:
+                title: "Type variants"
+                description: "Use with shared and project-specific workflows and forms"
+                url: "https://www.openproject.org/docs/release-notes/18-0-0/"
+              agile_reporting:
+                title: "Agile Reporting"
+                description: "Sprint reports, including many new charts"
+                url: "https://www.openproject.org/docs/release-notes/18-0-0/"
+              ai_text_actions:
+                title: "AI Text Actions"
+                description: "Summarize text, change formats, base it on templates"
+                url: "https://www.openproject.org/docs/release-notes/18-0-0/"
+              labels:
+                title: "Labels"
+                description: "Create and reuse tags"
+                url: "https://www.openproject.org/docs/release-notes/18-0-0/"
+              project_specific_values:
+                title: "Project-specific values"
+                description: "Configure or delegate custom fields per project"
+                url: "https://www.openproject.org/docs/release-notes/18-0-0/"
         "17_9":
           new_features_list:
             line_0: "Create work packages directly in Documents."

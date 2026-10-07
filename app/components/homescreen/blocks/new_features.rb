@@ -73,7 +73,7 @@ module Homescreen
       end
 
       def teaser_exists?
-        I18n.exists?(base_i18n_key)
+        I18n.exists?("#{base_i18n_key}.new_features_list")
       end
 
       def base_i18n_key
