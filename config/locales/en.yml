@@ -3671,6 +3671,7 @@ en:
           one: "Load previous reply"
           other: "Load previous %{count} replies"
         load_previous_page: "Load previous %{count} replies (out of %{total})"
+      mark_accepted_solution: "Mark as accepted solution"
       message_actions: "Message actions"
       participants:
         one: "1 participant"
@@ -3680,6 +3681,7 @@ en:
         other: "%{count} replies"
         zero: "No replies yet"
       started_html: "Started %{time}"
+      unmark_accepted_solution: "Unmark as accepted solution"
       with_accepted_solution: "With accepted solution"
   general_csv_decimal_separator: "."
 
