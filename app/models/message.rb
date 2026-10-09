@@ -78,6 +78,12 @@ class Message < ApplicationRecord
       .merge(Project.allowed_to(args.first || User.current, :view_messages))
   }
 
+  scope :accepted_solutions, -> { where(accepted_solution: true) }
+
+  def self.with_accepted_solution_ids(topic_ids)
+    accepted_solutions.where(parent_id: topic_ids).distinct.pluck(:parent_id).to_set
+  end
+
   def visible?(user = User.current)
     !user.nil? && user.allowed_in_project?(:view_messages, project)
   end
@@ -126,6 +132,15 @@ class Message < ApplicationRecord
     usr && usr.logged? &&
     (usr.allowed_in_project?(:delete_messages,
                              project) || (author == usr && usr.allowed_in_project?(:delete_own_messages, project)))
+  end
+
+  def accepted_solutions
+    children.accepted_solutions.reorder(:created_at, :id).includes(:author)
+  end
+
+  def solution_markable_by?(usr)
+    parent_id.present? && usr.logged? &&
+      (parent.author_id == usr.id || usr.allowed_in_project?(:edit_messages, project))
   end
 
   private

@@ -167,4 +167,53 @@ RSpec.describe Message do
       end
     end
   end
+
+  describe "accepted solutions" do
+    shared_let(:project) { create(:project) }
+    shared_let(:forum) { create(:forum, project:) }
+    shared_let(:topic_author) { create(:user) }
+    shared_let(:topic) { create(:message, forum:, author: topic_author) }
+    shared_let(:later) { create(:message, forum:, parent: topic, accepted_solution: true, created_at: 2.hours.ago) }
+    shared_let(:earlier) { create(:message, forum:, parent: topic, accepted_solution: true, created_at: 3.hours.ago) }
+    shared_let(:plain_reply) { create(:message, forum:, parent: topic) }
+
+    describe "#accepted_solutions" do
+      it "lists the topic's accepted replies, oldest first" do
+        expect(topic.accepted_solutions).to eq([earlier, later])
+      end
+    end
+
+    describe ".with_accepted_solution_ids" do
+      let!(:unsolved_topic) { create(:message, forum:) }
+
+      it "keeps only the topics that have an accepted reply" do
+        expect(described_class.with_accepted_solution_ids([topic.id, unsolved_topic.id])).to eq(Set[topic.id])
+      end
+    end
+
+    describe "#solution_markable_by?" do
+      let(:member) { create(:user, member_with_permissions: { project => %i[view_messages] }) }
+      let(:moderator) { create(:user, member_with_permissions: { project => %i[view_messages edit_messages] }) }
+
+      it "lets the topic's author mark a reply" do
+        expect(plain_reply).to be_solution_markable_by(topic_author)
+      end
+
+      it "lets a moderator mark a reply" do
+        expect(plain_reply).to be_solution_markable_by(moderator)
+      end
+
+      it "keeps other members out" do
+        expect(plain_reply).not_to be_solution_markable_by(member)
+      end
+
+      it "keeps the anonymous user out" do
+        expect(plain_reply).not_to be_solution_markable_by(User.anonymous)
+      end
+
+      it "never offers marking the opening post" do
+        expect(topic).not_to be_solution_markable_by(moderator)
+      end
+    end
+  end
 end
