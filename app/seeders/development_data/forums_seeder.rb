@@ -62,7 +62,8 @@ module DevelopmentData
 
       replied_at = data["replies"].each_with_index.map do |reply, index|
         create_message(forum:, parent: topic, subject: "RE: #{topic.subject}", author: reply["author"],
-                       content: reply["content"], created_at: started_at + ((index + 1) * MINUTES_BETWEEN_REPLIES).minutes)
+                       content: reply["content"], accepted_solution: reply["accepted_solution"] || false,
+                       created_at: started_at + ((index + 1) * MINUTES_BETWEEN_REPLIES).minutes)
           .created_at
       end
 
