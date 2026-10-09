@@ -34,9 +34,14 @@ module Forums
       alias_method :topic, :model
 
       delegate :project, :forum, to: :table
-      delegate :replies_count, to: :topic
 
       def row_data = { test_selector: "topic-row-#{topic.id}" }
+
+      def replies_count
+        return topic.replies_count unless table.solved?(topic)
+
+        safe_join([topic.replies_count, solved_icon(ml: 1)])
+      end
 
       def subject
         safe_join([subject_line, preview])
@@ -57,10 +62,13 @@ module Forums
         project_forum_topic_path(project, forum, topic, r: reply.id, anchor: "message-#{reply.id}")
       end
 
-      def subject_line
+      def subject_line # rubocop:disable Metrics/AbcSize
         flex_layout(align_items: :center) do |flex|
           flex.with_column(mr: 1) { flag(:pin, I18n.t("js.label_board_sticky"), "topic-sticky") } if topic.sticky?
           flex.with_column(mr: 1) { flag(:lock, I18n.t("js.label_board_locked"), "topic-locked") } if topic.locked?
+          if table.solved?(topic)
+            flex.with_column(mr: 1, classes: "op-forum-topics-table--mobile-only") { solved_icon }
+          end
           flex.with_column(classes: "ellipsis") { subject_link }
           flex.with_column(ml: 1, classes: "op-forum-topics-table--byline") { byline }
         end
@@ -83,6 +91,10 @@ module Forums
         render(Primer::Beta::Link.new(href: project_forum_topic_path(project, forum, topic), underline: false)) do
           render(Primer::Beta::Text.new(font_weight: :bold)) { topic.subject }
         end
+      end
+
+      def solved_icon(**)
+        render(Messages::AcceptedSolutionIconComponent.new(kind: :topic, **))
       end
 
       def flag(icon, label, test_selector)
