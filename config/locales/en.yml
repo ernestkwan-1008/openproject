@@ -3662,6 +3662,10 @@ en:
         recent_activity: "Recent activity"
       topic: "Topic"
     topic:
+      accepted_solution: "Accepted solution"
+      accepted_solutions_banner:
+        one: "Accepted solution:"
+        other: "Accepted solutions:"
       gap:
         load_previous:
           one: "Load previous reply"
@@ -3676,6 +3680,7 @@ en:
         other: "%{count} replies"
         zero: "No replies yet"
       started_html: "Started %{time}"
+      with_accepted_solution: "With accepted solution"
   general_csv_decimal_separator: "."
 
   general_csv_encoding: "UTF-8"

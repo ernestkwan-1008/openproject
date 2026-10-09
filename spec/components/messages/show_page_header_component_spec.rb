@@ -63,6 +63,26 @@ RSpec.describe Messages::ShowPageHeaderComponent, type: :component do
     expect(rendered_component).to have_no_text("participant")
   end
 
+  it "carries no accepted-solution mark without one" do
+    expect(rendered_component).to have_no_role(:img, accessible_name: "With accepted solution")
+  end
+
+  context "with an accepted solution" do
+    before do
+      create(:message, forum:, parent: topic, accepted_solution: true)
+      topic.reload
+      rendered_component
+    end
+
+    it "marks the reply count with a titled checkmark" do
+      expect(find_test_selector("topic-summary")).to have_role(:img, accessible_name: "With accepted solution")
+    end
+
+    it "keeps the checkmark out of the summary's text" do
+      expect(rendered_component).to have_test_selector("topic-summary", text: /· 1 reply\s*\z/)
+    end
+  end
+
   it "states that nobody replied yet" do
     expect(rendered_component).to have_test_selector("topic-summary", text: "No replies yet")
   end

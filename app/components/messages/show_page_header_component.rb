@@ -53,19 +53,5 @@ module Messages
     def forum = @topic.forum
 
     def project = forum.project
-
-    def summary
-      parts = [started, t("forums.topic.replies", count: @topic.replies_count)]
-      parts << t("forums.topic.participants", count: participants_count) if participants_count.positive?
-      safe_join(parts, " · ")
-    end
-
-    def started
-      t("forums.topic.started_html", time: render(OpPrimer::RelativeTimeComponent.new(datetime: @topic.created_at, prefix: "")))
-    end
-
-    def participants_count
-      @participants_count ||= Message.where(id: @topic.id).or(Message.where(parent_id: @topic.id)).distinct.count(:author_id)
-    end
   end
 end

@@ -66,6 +66,9 @@ module Messages
             end
           end
           author_and_time.with_column { anchor_link }
+          if reply? && message.accepted_solution?
+            author_and_time.with_column(ml: 2) { render(Messages::AcceptedSolutionIconComponent.new(kind: :reply)) }
+          end
         end
         line.with_column(ml: 1) { action_menu }
       end
