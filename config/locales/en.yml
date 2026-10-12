@@ -6121,9 +6121,6 @@ en:
     push:
       all_read_title: "No unread notifications"
       fallback_title: "New activity in OpenProject"
-      title:
-        one: "%{count} unread notification"
-        other: "%{count} unread notifications"
       reasons:
         assigned: "%{actor} assigned you"
         commented: "%{actor} commented"
@@ -6134,6 +6131,9 @@ en:
         responsible: "%{actor} made you accountable"
         shared: "%{actor} shared a work package with you"
         updated: "%{actor} updated"
+      title:
+        one: "%{count} unread notification"
+        other: "%{count} unread notifications"
 
   queries:
     apply_filter: Apply preconfigured filter
