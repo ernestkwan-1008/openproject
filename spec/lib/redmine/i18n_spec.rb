@@ -131,6 +131,49 @@ module OpenProject
       end
     end
 
+    describe "#translate_language" do
+      subject(:language_options) { all_languages.map { translate_language(it) } }
+
+      it 'has all languages translated ("English" should appear only once)' do
+        impostor_locales = language_options.filter_map { |lang, locale| locale if lang == "English" && locale != "en" }
+        expect(impostor_locales.count).to eq(0), <<~ERR
+          The locales #{impostor_locales.to_sentence} display themselves as "English"!
+
+          Probably because new languages were added, and the translation for their language is not
+          available, so it fallbacks to the English translation.
+
+          To fix it, generate translation files from CLDR by running
+
+              script/i18n/generate_languages_translations
+
+          And commit the yml files added in "config/locales/generated/*.yml".
+        ERR
+      end
+
+      it "has distinct languages translation" do
+        duplicates =
+          language_options
+            .group_by(&:first)
+            .transform_values { it.map(&:last) }
+            .reject { |_lang, locales| locales.one? }
+
+        expect(duplicates).to be_empty, <<~ERR
+          Some identical language names are used for different locales!
+
+            duplicates: #{duplicates}
+
+          This happens when a new language is added to Crowdin: new translation files are
+          generated and the new language is available in Setting.all_languages, but there
+          is no translation for its name yet, and so it falls back to "English".
+
+          To fix it:
+            - run the script "script/i18n/generate_languages_translations"
+            - commit the additional translation file generated in
+              "config/locales/generated/*.yml".
+        ERR
+      end
+    end
+
     describe "valid_languages" do
       it "allows languages that are available" do
         with_settings(available_languages: ["en"])

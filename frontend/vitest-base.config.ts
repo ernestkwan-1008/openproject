@@ -20,8 +20,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
@@ -44,6 +43,19 @@ export default defineConfig({
         if (name === 'client' && config.resolve?.conditions) {
           config.resolve.conditions = config.resolve.conditions.filter((condition) => condition !== 'node');
         }
+      },
+    },
+    {
+      // @angular/build < 22.2 copies the plugins above into the inline project it declares.
+      // Since Vitest 5 that project also inherits this file, so each plugin would apply twice.
+      name: 'op-do-not-extend-runner-config',
+      enforce: 'post',
+      config(config) {
+        config.test?.projects?.forEach((project) => {
+          if (typeof project === 'object') {
+            Object.assign(project, { extends: false });
+          }
+        });
       },
     },
   ],

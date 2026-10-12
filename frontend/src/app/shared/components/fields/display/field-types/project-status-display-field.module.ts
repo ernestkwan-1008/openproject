@@ -20,8 +20,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
@@ -33,13 +32,14 @@ import {
 import {
   Highlighting,
 } from 'core-app/features/work-packages/components/wp-fast-table/builders/highlighting/highlighting.functions';
+import { HalResource } from 'core-app/features/hal/resources/hal-resource';
 
 export class ProjectStatusDisplayField extends DisplayField {
   public render(element:HTMLElement, displayText:string):void {
-    const code = this.value?.id;
+    const code = (this.value as HalResource|null|undefined)?.id;
 
     const label = document.createElement('span');
-    label.classList.add('Label', ...Highlighting.backgroundMutedClass('project_status', code).split(' '), 'Label--inline');
+    label.classList.add('Label', ...Highlighting.backgroundMutedClass('project_status', String(code)).split(' '), 'Label--inline');
     label.textContent = projectStatusI18n(code, this.I18n);
 
     element.innerHTML = '';
