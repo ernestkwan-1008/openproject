@@ -14,8 +14,11 @@ services:
       OPENPROJECT_HOST__NAME: ${OP_HOST_NAME:-localhost:8080}
       OPENPROJECT_HTTPS: ${OP_HTTPS:-false}
       OPENPROJECT_USER__DEFAULT__TIMEZONE: ${OP_DEFAULT_TIMEZONE:-Asia/Hong_Kong}
+      # Directory holding user_list.csv; read by the AD user sync job (modules/ad_user_sync)
+      AD_IMPORT_DIR: ${AD_IMPORT_DIR:?set AD_IMPORT_DIR in .env}
     volumes:
       - "${OP_PGDATA_DIR:?set OP_PGDATA_DIR in .env}:/var/openproject/pgdata"
       - "${OP_ASSETS_DIR:?set OP_ASSETS_DIR in .env}:/var/openproject/assets"
-      - "${AD_IMPORT_DIR:?set AD_IMPORT_DIR in .env}:/data/AD/import:ro"
+      # mounted at the same path inside the container so AD_IMPORT_DIR is valid on both sides
+      - "${AD_IMPORT_DIR:?set AD_IMPORT_DIR in .env}:${AD_IMPORT_DIR}:ro"
       - ./enterprise_token.rb:/app/app/models/enterprise_token.rb:ro

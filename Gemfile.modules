@@ -28,6 +28,7 @@ group :opf_plugins do
   gem 'openproject-gitlab_integration',        path: 'modules/gitlab_integration'
   gem 'openproject-ldap_groups',               path: 'modules/ldap_groups'
   gem 'openproject-ldap_departments',          path: 'modules/ldap_departments'
+  gem 'openproject-ad_user_sync',              path: 'modules/ad_user_sync'
   gem 'openproject-recaptcha',                 path: 'modules/recaptcha'
   gem 'openproject-job_status',                path: 'modules/job_status'
 
