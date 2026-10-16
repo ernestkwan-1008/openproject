@@ -68,7 +68,7 @@ module AdUserSync
     def self.report_lines(summary)
       lines = []
       lines << "DRY RUN - no changes written" if summary[:dry_run]
-      %i[created updated reactivated locked departments_created].each do |key|
+      %i[created updated reactivated locked departments_created inboxes_created].each do |key|
         lines << "#{key.to_s.tr('_', ' ')}: #{summary[key].size}"
         summary[key].each { |entry| lines << "  #{entry}" }
       end
@@ -116,7 +116,7 @@ module AdUserSync
     private
 
     def new_summary(warnings)
-      { created: [], updated: [], reactivated: [], locked: [], departments_created: [],
+      { created: [], updated: [], reactivated: [], locked: [], departments_created: [], inboxes_created: [],
         errors: [], warnings: warnings.dup, dry_run: }
     end
 
@@ -177,6 +177,8 @@ module AdUserSync
 
     def execute(plan)
       @job_title_field = job_title_field
+      @inbox_supported = inbox_supported?
+      warn_when_owner_role_cannot_share if @inbox_supported
 
       plan[:rows].each do |row|
         user = @users_by_key[row.key]
@@ -208,9 +210,11 @@ module AdUserSync
 
       if dry_run
         dry_run_new_department(row.department) if row.department.present? && find_department(row.department).nil?
+        @summary[:inboxes_created] << row.mail if @inbox_supported
         return
       end
 
+      user = nil
       guarded("create #{row.mail}") do
         user = create_invited_user(row)
         if user
@@ -219,6 +223,7 @@ module AdUserSync
           @summary[:created].delete(row.mail)
         end
       end
+      ensure_inbox(user, row) if user
     end
 
     # Creates the user in the "invited" state, like an invitation, but without sending the invitation
@@ -260,6 +265,7 @@ module AdUserSync
       changed |= update_department(user, row)
 
       @summary[:updated] << row.mail if changed
+      ensure_inbox(user, row) unless user.locked? && !reactivate
     end
 
     def update_attributes(user, row)
@@ -451,6 +457,105 @@ module AdUserSync
                               .tap { |section| section.save!(validate: false) }
     end
 
+    # --- "My inbox" private project --------------------------------------------------------
+
+    # Inbox identifiers are classic-format slugs, so the feature is skipped in semantic identifier mode.
+    def inbox_supported?
+      return true unless Setting::WorkPackageIdentifier.semantic?
+
+      @summary[:warnings] << "Project identifiers are in semantic mode; the 'My inbox' projects are not created"
+      false
+    end
+
+    # Makes sure the user owns a private "My inbox" project, favorited for them. Only checked for users who
+    # are (or become) active. The inbox is recognised by its identifier; see Inbox.identifiers_for.
+    def ensure_inbox(user, row)
+      return unless @inbox_supported
+      return if user.locked? && !dry_run
+
+      Inbox.identifiers_for(row.mail).each do |identifier|
+        project = Project.unscoped.where("LOWER(identifier) = ?", identifier).first
+
+        if project
+          # Existing inbox of this user (also when archived): nothing to create; repair the module if needed.
+          return repair_inbox(project) if project.members.exists?(user_id: user.id)
+        elsif !identifier_reserved?(identifier)
+          return create_inbox(user, row, identifier)
+        end
+        # The identifier belongs to someone else (same account name on another domain): try the next one.
+      end
+
+      record_error("inbox of #{row.mail}: no free project identifier found")
+    end
+
+    # Inboxes created before work packages were part of the idea may lack the work package module.
+    def repair_inbox(project)
+      return if dry_run || project.module_enabled?(Inbox::REQUIRED_MODULE)
+
+      guarded("repair inbox #{project.identifier}") { Inbox.ensure_work_package_tracking(project) }
+    end
+
+    # The owner needs to share single work packages, which two permissions allow.
+    def warn_when_owner_role_cannot_share
+      role = ProjectRole.in_new_project
+      return unless role
+
+      missing = %w[share_work_packages view_shared_work_packages] - role.permissions.map(&:to_s)
+      return if missing.empty?
+
+      @summary[:warnings] << "The 'new project' role '#{role.name}' lacks #{missing.join(', ')}: inbox owners " \
+                             "cannot share single work packages (Administration > Roles and permissions)"
+    end
+
+    # Identifiers of deleted/renamed projects stay reserved by FriendlyId and cannot be reused.
+    def identifier_reserved?(identifier)
+      Project.identifier_slugs.for_identifier(identifier).exists?
+    end
+
+    def create_inbox(user, row, identifier)
+      @summary[:inboxes_created] << row.mail
+      return if dry_run
+
+      errors_before = @summary[:errors].size
+
+      guarded("inbox of #{row.mail}") do
+        # One transaction: when the membership cannot be created, no half-built inbox is left behind.
+        Project.transaction do
+          project = create_inbox_project(identifier)
+          add_inbox_owner(project, user)
+          project.set_favorited(user, favorited: true)
+        end
+      end
+
+      @summary[:inboxes_created].delete(row.mail) if @summary[:errors].size > errors_before
+    end
+
+    def create_inbox_project(identifier)
+      modules = (Setting.default_projects_modules.to_a | [Inbox::REQUIRED_MODULE]).map(&:to_s)
+      call = Projects::CreateService
+               .new(user: User.system)
+               .call(name: Inbox::NAME, identifier:, public: false, enabled_module_names: modules)
+      raise failure_message("create project #{identifier}", call) unless call.success?
+
+      call.result
+    end
+
+    # Created by the system user, so the project creator's "new project" role has to be granted explicitly.
+    # Without a project-admin like role the user could not share the inbox.
+    def add_inbox_owner(project, user)
+      role = ProjectRole.in_new_project
+      raise "no role available for the owner of #{project.identifier} (see Administration > Projects)" unless role
+
+      call = Members::CreateService
+               .new(user: User.system, contract_class: EmptyContract)
+               .call(roles: [role], project:, principal: user, send_notifications: false)
+      raise failure_message("add #{user.mail} to #{project.identifier}", call) unless call.success?
+    end
+
+    def failure_message(label, call)
+      "#{label}: #{call.message.presence || call.errors.full_messages.to_sentence}"
+    end
+
     # --- Names -----------------------------------------------------------------------------
 
     # OpenProject stores first and last name separately, the CSV has a single display name:
@@ -475,7 +580,8 @@ module AdUserSync
       Rails.logger.info(
         "#{LOG_PREFIX} #{'dry run ' if dry_run}done: created=#{s[:created].size} updated=#{s[:updated].size} " \
         "reactivated=#{s[:reactivated].size} locked=#{s[:locked].size} " \
-        "departments_created=#{s[:departments_created].size} errors=#{s[:errors].size} warnings=#{s[:warnings].size}"
+        "departments_created=#{s[:departments_created].size} inboxes_created=#{s[:inboxes_created].size} " \
+        "errors=#{s[:errors].size} warnings=#{s[:warnings].size}"
       )
     end
   end

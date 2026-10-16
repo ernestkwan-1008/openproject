@@ -29,6 +29,8 @@
 # ++
 module Meetings
   class ICalController < ApplicationController
+    include Meetings::EnabledGuard
+
     skip_before_action :check_if_login_required
     authorization_checked! :index
 

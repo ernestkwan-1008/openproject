@@ -29,6 +29,7 @@
 # ++
 
 class Meetings::FiltersController < ApplicationController
+  include Meetings::EnabledGuard
   include Meetings::QueryLoading
 
   before_action :load_and_authorize_in_optional_project

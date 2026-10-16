@@ -13,6 +13,13 @@ RSpec.describe AdUserSync::SyncService do
 
   let(:summary) { result.result }
 
+  # The role every inbox owner gets (Administration > Projects > "new project" role).
+  let!(:owner_role) do
+    create(:project_role, permissions: ProjectRole::PERMISSIONS_FOR_PROJECT_CREATOR).tap do |role|
+      Setting.new_project_user_role_id = role.id
+    end
+  end
+
   before do
     lines = csv_rows.map do |row|
       row = { name: "Some Body", title: "Officer", department: "Leasing" }.merge(row)
@@ -65,6 +72,148 @@ RSpec.describe AdUserSync::SyncService do
       expect(second).to be_success
       expect(second.result).to include(created: [], updated: [], locked: [], departments_created: [])
       expect(User.where(mail: "Felix.Mak@hshd.com.hk").count).to eq(1)
+    end
+  end
+
+  describe "My inbox project" do
+    let(:csv_rows) { [{ mail: "Hedy.Wu@hshd.com.hk", name: "Hedy Wu" }] }
+
+    it "creates a private project for a new user, with the user as member and as favorite" do
+      expect(result).to be_success
+      expect(summary[:inboxes_created]).to eq(["Hedy.Wu@hshd.com.hk"])
+
+      user = User.find_by!(mail: "Hedy.Wu@hshd.com.hk")
+      inbox = Project.find_by!(identifier: "my-inbox-hedy-wu")
+      expect(inbox).to have_attributes(name: "My inbox", public: false)
+      expect(inbox.users).to contain_exactly(user)
+      expect(inbox.member_principals.map(&:user_id)).to include(user.id)
+      expect(Member.find_by(project: inbox, principal: user).roles).to include(owner_role)
+      expect(inbox).to be_favorited_by(user)
+    end
+
+    it "enables work package tracking in the inbox so work packages can be created there" do
+      result
+
+      expect(Project.find_by!(identifier: "my-inbox-hedy-wu").module_enabled?("work_package_tracking")).to be(true)
+    end
+
+    it "repairs an existing inbox that lacks the work package module" do
+      described_class.new(path:, **options).call
+      inbox = Project.find_by!(identifier: "my-inbox-hedy-wu")
+      inbox.enabled_modules.where(name: "work_package_tracking").destroy_all
+
+      described_class.new(path:, **options).call
+
+      expect(inbox.reload.module_enabled?("work_package_tracking")).to be(true)
+    end
+
+    it "warns when the owner role cannot share single work packages" do
+      expect(summary[:warnings].join).to include("share_work_packages")
+    end
+
+    it "does not send a project-created email" do
+      expect { perform_enqueued_jobs { result } }.not_to change { ActionMailer::Base.deliveries.size }
+    end
+
+    it "creates nothing the second time and does not re-favorite a removed favorite" do
+      described_class.new(path:, **options).call
+      inbox = Project.find_by!(identifier: "my-inbox-hedy-wu")
+      inbox.set_favorited(User.find_by!(mail: "Hedy.Wu@hshd.com.hk"), favorited: false)
+
+      second = described_class.new(path:, **options).call
+
+      expect(second.result[:inboxes_created]).to be_empty
+      expect(Project.where("identifier LIKE 'my-inbox-%'").count).to eq(1)
+      expect(inbox.reload).not_to be_favorited_by(User.find_by!(mail: "Hedy.Wu@hshd.com.hk"))
+    end
+
+    context "with an existing user who has no inbox yet" do
+      let!(:user) { create(:user, mail: "hedy.wu@hshd.com.hk", login: "hedy.wu@hshd.com.hk") }
+
+      it "creates the missing inbox" do
+        expect(summary[:inboxes_created]).to eq(["Hedy.Wu@hshd.com.hk"])
+        expect(Project.find_by!(identifier: "my-inbox-hedy-wu").users).to contain_exactly(user)
+      end
+    end
+
+    context "when the account name was already used by another person (different domain)" do
+      let(:csv_rows) { [{ mail: "mrfo@maderagroup.com" }, { mail: "mrfo@hshd.com.hk" }] }
+
+      it "gives the second person an identifier built from the whole address" do
+        expect(result).to be_success
+
+        first = User.find_by!(mail: "mrfo@maderagroup.com")
+        second = User.find_by!(mail: "mrfo@hshd.com.hk")
+        expect(Project.find_by!(identifier: "my-inbox-mrfo").users).to contain_exactly(first)
+        expect(Project.find_by!(identifier: "my-inbox-mrfo-hshd-com-hk").users).to contain_exactly(second)
+      end
+    end
+
+    context "when the account name has characters that identifiers do not allow" do
+      let(:csv_rows) { [{ mail: "a.b+tag@x.com" }] }
+
+      it "cleans them" do
+        result
+
+        expect(Project.find_by(identifier: "my-inbox-a-b-tag")).to be_present
+      end
+    end
+
+    context "when the user archived the inbox" do
+      let!(:user) { create(:user, mail: "hedy.wu@hshd.com.hk", login: "hedy.wu@hshd.com.hk") }
+
+      before do
+        described_class.new(path:, **options).call
+        Project.find_by!(identifier: "my-inbox-hedy-wu").update_column(:active, false)
+      end
+
+      it "does not create a second one" do
+        expect { result }.not_to change(Project.unscoped, :count)
+      end
+    end
+
+    context "when the user deleted the inbox" do
+      before do
+        described_class.new(path:, **options).call
+        Project.find_by!(identifier: "my-inbox-hedy-wu").destroy
+      end
+
+      it "creates it again" do
+        expect(result).to be_success
+        expect(summary[:inboxes_created]).to eq(["Hedy.Wu@hshd.com.hk"])
+        expect(Project.find_by!(identifier: "my-inbox-hedy-wu").users)
+          .to contain_exactly(User.find_by!(mail: "Hedy.Wu@hshd.com.hk"))
+      end
+    end
+
+    context "when the user is not in the CSV any more" do
+      let(:csv_rows) { [{ mail: "someone.else@x.com" }] }
+      let!(:leaver) { create(:user, mail: "leaver@x.com", login: "leaver@x.com") }
+
+      it "gives the locked user no inbox" do
+        result
+
+        expect(leaver.reload).to be_locked
+        expect(Project.find_by(identifier: "my-inbox-leaver")).to be_nil
+      end
+    end
+
+    context "when project identifiers are semantic", with_settings: { work_packages_identifier: "semantic" } do
+      it "skips the inboxes and warns" do
+        expect(result).to be_success
+        expect(summary[:inboxes_created]).to be_empty
+        expect(summary[:warnings].join).to include("semantic")
+      end
+    end
+
+    context "with a dry run" do
+      let(:options) { { dry_run: true, max_lock_percent: 100 } }
+
+      it "reports the inbox but creates no project" do
+        expect { result }.not_to change(Project, :count)
+
+        expect(summary[:inboxes_created]).to eq(["Hedy.Wu@hshd.com.hk"])
+      end
     end
   end
 
@@ -222,11 +371,11 @@ RSpec.describe AdUserSync::SyncService do
     let!(:missing) { create(:user) }
 
     it "reports the planned changes but writes nothing" do
-      expect { result }.not_to change { [User.count, Group.count, UserCustomField.count] }
+      expect { result }.not_to change { [User.count, Group.count, UserCustomField.count, Project.count] }
 
       expect(result).to be_success
       expect(summary).to include(dry_run: true, created: ["new@x.com"], locked: [missing.mail],
-                                 departments_created: ["Brand New"])
+                                 departments_created: ["Brand New"], inboxes_created: ["new@x.com"])
       expect(missing.reload).to be_active
     end
   end
@@ -249,7 +398,7 @@ RSpec.describe AdUserSync::SyncService do
     it "renders counts and entries" do
       lines = described_class.report_lines(
         { dry_run: false, created: ["a@x.com"], updated: [], reactivated: [], locked: [], departments_created: [],
-          warnings: ["w"], errors: [] }
+          inboxes_created: [], warnings: ["w"], errors: [] }
       )
 
       expect(lines).to include("created: 1", "  a@x.com", "warning: w")

@@ -1,0 +1,26 @@
+<%=
+  component_wrapper do
+    primer_form_with(
+      scope: :send_to_inbox,
+      model:,
+      method: :post,
+      url: send_to_inbox_path,
+      html: {
+        data: { turbo_stream: true },
+        id: AdUserSync::SendToInbox::DialogComponent::FORM_ID
+      }
+    ) do |f|
+      flex_layout(mb: 3) do |body|
+        if @error.present?
+          body.with_row do
+            render(Primer::Alpha::Banner.new(mb: 3, icon: :stop, scheme: :danger)) { @error }
+          end
+        end
+
+        body.with_row do
+          render(AdUserSync::SendToInbox::Form.new(f))
+        end
+      end
+    end
+  end
+%>

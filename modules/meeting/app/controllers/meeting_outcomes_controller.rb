@@ -29,6 +29,7 @@
 #++
 
 class MeetingOutcomesController < ApplicationController
+  include Meetings::EnabledGuard
   include OpTurbo::ComponentStream
   include Meetings::AgendaComponentStreams
 

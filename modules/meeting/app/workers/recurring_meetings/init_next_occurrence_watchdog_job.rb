@@ -32,6 +32,8 @@ class RecurringMeetings::InitNextOccurrenceWatchdogJob < ApplicationJob
   queue_with_priority :low
 
   def perform
+    return unless Setting.meetings_enabled?
+
     key = RecurringMeetings::InitNextOccurrenceJob::CONCURRENCY_KEY_BASE
 
     RecurringMeeting

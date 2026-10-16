@@ -29,6 +29,7 @@
 #++
 
 class MeetingTemplatesController < ApplicationController
+  include Meetings::EnabledGuard
   before_action :load_and_authorize_in_optional_project
   before_action :require_enterprise_token,
                 except: %i[index]

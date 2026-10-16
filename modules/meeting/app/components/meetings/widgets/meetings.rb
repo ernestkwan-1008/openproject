@@ -64,7 +64,9 @@ module Meetings
       end
 
       def render?
-        current_user.logged? && (global_scoped? || project.module_enabled?("meetings"))
+        # Also used on project overview pages, so the system-wide switch is checked here as well.
+        Setting.meetings_enabled? &&
+          current_user.logged? && (global_scoped? || project.module_enabled?("meetings"))
       end
 
       private

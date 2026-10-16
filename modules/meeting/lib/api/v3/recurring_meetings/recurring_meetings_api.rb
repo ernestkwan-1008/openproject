@@ -32,6 +32,10 @@ module API
   module V3
     module RecurringMeetings
       class RecurringMeetingsAPI < ::API::OpenProjectAPI
+        after_validation do
+          raise ::API::Errors::NotFound unless Setting.meetings_enabled?
+        end
+
         helpers do
           def represent_recurring_meeting_result(call)
             if call.success?

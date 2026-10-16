@@ -1,0 +1,34 @@
+<%=
+  render(
+    Primer::Alpha::Dialog.new(
+      id: DIALOG_ID,
+      title: I18n.t("ad_user_sync.send_to_inbox.title"),
+      size: :medium_portrait,
+      data: { "keep-open-on-submit": true }
+    )
+  ) do |dialog|
+    dialog.with_header(variant: :large)
+    dialog.with_body(classes: "Overlay-body_autocomplete_height") do
+      safe_join(
+        [
+          render(Primer::Beta::Text.new(color: :muted, display: :block, mb: 3)) do
+            I18n.t("ad_user_sync.send_to_inbox.explanation")
+          end,
+          render(AdUserSync::SendToInbox::FormComponent.new(model))
+        ]
+      )
+    end
+
+    dialog.with_footer do
+      component_collection do |footer|
+        footer.with_component(
+          Primer::Beta::Button.new(data: { "close-dialog-id": DIALOG_ID }, mr: 1)
+        ) { I18n.t(:button_cancel) }
+
+        footer.with_component(
+          Primer::Beta::Button.new(scheme: :primary, form: FORM_ID, type: :submit)
+        ) { I18n.t("ad_user_sync.send_to_inbox.submit") }
+      end
+    end
+  end
+%>

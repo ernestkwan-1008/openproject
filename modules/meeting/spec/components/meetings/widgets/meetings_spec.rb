@@ -68,6 +68,13 @@ RSpec.describe Meetings::Widgets::Meetings, type: :component do
     end
   end
 
+  context "when Meetings is switched off system-wide", with_settings: { meetings_enabled: false } do
+    it "renders nothing, globally and for a project" do
+      expect(render_component).to have_no_test_selector("meetings-widget-empty")
+      expect(render_component(project_red)).to have_no_test_selector("meetings-widget-empty")
+    end
+  end
+
   context "for root" do
     context "with no meetings" do
       it_behaves_like "empty-state with action"

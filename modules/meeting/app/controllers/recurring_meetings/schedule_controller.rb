@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 module RecurringMeetings
   class ScheduleController < ApplicationController
+    include Meetings::EnabledGuard
+
     include OpTurbo::ComponentStream
 
     before_action :require_login, :build_meeting

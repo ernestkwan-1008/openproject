@@ -29,6 +29,7 @@
 #++
 
 class WorkPackageMeetingsTabController < ApplicationController
+  include Meetings::EnabledGuard
   include OpTurbo::ComponentStream
   include Meetings::WorkPackageMeetingsTabComponentStreams
 

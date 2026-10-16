@@ -27,6 +27,9 @@
 #++
 
 module Costs::Patches::SettingSeederPatch
+  SEEDED_CURRENCY = "$"
+  SEEDED_CURRENCY_FORMAT = "%u %n"
+
   def self.included(base) # :nodoc:
     base.prepend InstanceMethods
   end
@@ -38,6 +41,12 @@ module Costs::Patches::SettingSeederPatch
       if original_data["default_projects_modules"]&.exclude? "costs"
         original_data["default_projects_modules"] << "costs"
       end
+
+      # This installation uses "$" (shown before the number, e.g. "$ 100") instead of the "€" of the
+      # setting definition. Seeded only while the setting is not yet stored, so later changes made in
+      # the administration are kept.
+      original_data["costs_currency"] = SEEDED_CURRENCY if original_data.key?("costs_currency")
+      original_data["costs_currency_format"] = SEEDED_CURRENCY_FORMAT if original_data.key?("costs_currency_format")
 
       original_data
     end

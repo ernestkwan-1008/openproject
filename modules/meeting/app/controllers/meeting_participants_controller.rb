@@ -29,6 +29,7 @@
 #++
 
 class MeetingParticipantsController < ApplicationController
+  include Meetings::EnabledGuard
   include OpTurbo::ComponentStream
   include OpTurbo::FlashStreamHelper
   include Meetings::AgendaComponentStreams

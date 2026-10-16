@@ -47,6 +47,10 @@ module Projects::Identifier
 
   RESERVED_IDENTIFIERS = %w[new menu queries filters identifier_update_dialog identifier_suggestion].freeze
 
+  # Identifier prefix of the private per-user "My inbox" projects (created by the AD user sync).
+  # The identifier of such a project cannot be changed, see Projects::UpdateContract.
+  INBOX_IDENTIFIER_PREFIX = "my-inbox-"
+
   included do
     extend FriendlyId
 

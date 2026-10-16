@@ -32,6 +32,10 @@ module API
   module V3
     module MeetingAgendaItems
       class MeetingAgendaItemsByWorkPackageAPI < ::API::OpenProjectAPI
+        after_validation do
+          raise ::API::Errors::NotFound unless Setting.meetings_enabled?
+        end
+
         resources :meeting_agenda_items do
           get do
             items = MeetingAgendaItem

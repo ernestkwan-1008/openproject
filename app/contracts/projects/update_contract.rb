@@ -30,6 +30,8 @@
 
 module Projects
   class UpdateContract < BaseContract
+    validate :validate_inbox_identifier_unchanged
+
     def writable_attributes
       # Permission checks must use the original project id, not a user-modified one.
       # Without this, changing the id (e.g. via BCF API) causes permission lookups
@@ -51,6 +53,15 @@ module Projects
     end
 
     private
+
+    # The identifier of a private "My inbox" project is fixed for everybody, administrators included.
+    # Judged on the original identifier, so renaming the project first does not unlock it.
+    def validate_inbox_identifier_unchanged
+      return unless model.persisted? && model.identifier_changed?
+      return unless model.identifier_was.to_s.start_with?(Projects::Identifier::INBOX_IDENTIFIER_PREFIX)
+
+      errors.add(:identifier, :inbox_locked)
+    end
 
     def project_attributes_only? = options[:project_attributes_only].present?
 

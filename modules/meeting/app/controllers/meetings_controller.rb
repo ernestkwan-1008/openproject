@@ -29,6 +29,8 @@
 #++
 
 class MeetingsController < ApplicationController
+  include Meetings::EnabledGuard
+
   before_action :load_and_authorize_in_optional_project
 
   before_action :determine_date_range, only: %i[history]

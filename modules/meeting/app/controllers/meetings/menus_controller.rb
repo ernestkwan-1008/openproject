@@ -28,6 +28,8 @@
 # ++
 module Meetings
   class MenusController < ApplicationController
+    include Meetings::EnabledGuard
+
     before_action :load_and_authorize_in_optional_project
 
     def show

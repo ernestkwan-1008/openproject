@@ -32,6 +32,11 @@ module API
   module V3
     module Meetings
       class MeetingsAPI < ::API::OpenProjectAPI
+        # Also covers the nested/mounted meeting APIs (agenda items, sections, outcomes, attachments)
+        after_validation do
+          raise ::API::Errors::NotFound unless Setting.meetings_enabled?
+        end
+
         resources :meetings do
           get &::API::V3::Utilities::Endpoints::Index.new(model: Meeting).mount
 

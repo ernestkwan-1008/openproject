@@ -703,6 +703,7 @@ en:
               dependency_missing: "The module '%{dependency}' needs to be enabled as well since the module '%{module}' depends on it."
               format: "%{message}"
             identifier:
+              inbox_locked: "of a private inbox project cannot be changed."
               must_start_with_letter: "must start with a letter"
               no_special_characters: "may only contain uppercase letters, numbers, and underscores"
             types:

@@ -8,7 +8,8 @@ module OpenProject::Meeting
         def extension
           ->(*) do
             link :meetings,
-                 cache_if: -> { current_user.allowed_in_any_project?(:view_meetings) } do
+                 cache_if: -> { Setting.meetings_enabled? && current_user.allowed_in_any_project?(:view_meetings) } do
+              next unless Setting.meetings_enabled?
               next if represented.new_record?
 
               {

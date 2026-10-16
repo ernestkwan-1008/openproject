@@ -40,7 +40,7 @@ module OpenProject::Meeting
     register "openproject-meeting",
              author_url: "https://www.openproject.org",
              bundled: true do
-      project_module :meetings do
+      project_module :meetings, if: ->(*) { Setting.meetings_enabled? } do
         permission :view_meetings,
                    {
                      meetings: %i[index show check_for_updates download_ics
@@ -118,16 +118,26 @@ module OpenProject::Meeting
         search.register :meetings
       end
 
+      menu :admin_menu,
+           :meetings_settings,
+           { controller: "/admin/meetings_settings", action: :show },
+           if: ->(*) { User.current.admin? },
+           caption: :label_meeting_plural,
+           icon: "comment-discussion"
+
+      # The whole feature can be switched off in Administration (setting meetings_enabled).
       menu :project_menu,
            :meetings, { controller: "/meetings", action: "index" },
            caption: :project_module_meetings,
            after: :boards,
-           icon: "comment-discussion"
+           icon: "comment-discussion",
+           if: ->(*) { Setting.meetings_enabled? }
 
       menu :project_menu,
            :meetings_query_select, { controller: "/meetings", action: "index" },
            parent: :meetings,
-           partial: "meetings/menus/menu"
+           partial: "meetings/menus/menu",
+           if: ->(*) { Setting.meetings_enabled? }
 
       menu :work_package_split_view,
            :meetings,
@@ -135,7 +145,7 @@ module OpenProject::Meeting
            skip_permissions_check: true,
            after: :relations,
            if: ->(_project) {
-             User.current.allowed_in_any_project?(:view_meetings)
+             Setting.meetings_enabled? && User.current.allowed_in_any_project?(:view_meetings)
            },
            badge: ->(work_package:, **) {
              Meeting.visible.where(id: work_package.meetings.select(:id)).count
@@ -143,7 +153,8 @@ module OpenProject::Meeting
            caption: :label_meeting_plural
 
       should_render_global_menu_item = Proc.new do
-        (User.current.logged? || !Setting.login_required?) &&
+        Setting.meetings_enabled? &&
+          (User.current.logged? || !Setting.login_required?) &&
           User.current.allowed_in_any_project?(:view_meetings)
       end
 
@@ -171,6 +182,11 @@ module OpenProject::Meeting
       ActiveSupport::Inflector.inflections do |inflect|
         inflect.uncountable "meeting_minutes"
       end
+    end
+
+    initializer "meeting.settings" do
+      # System-wide switch (Administration > Meetings). When off, the feature is hidden and blocked everywhere.
+      ::Settings::Definition.add "meetings_enabled", default: true, format: :boolean
     end
 
     activity_provider :meetings, class_name: "Activities::MeetingActivityProvider", default: false

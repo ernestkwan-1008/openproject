@@ -56,6 +56,9 @@ module RecurringMeetings
     attr_accessor :recurring_meeting, :scheduled_time
 
     def perform(recurring_meeting, scheduled_time)
+      # Meetings switched off system-wide: stop the chain; the watchdog job re-schedules it once re-enabled.
+      return unless Setting.meetings_enabled?
+
       self.recurring_meeting = recurring_meeting
       return if recurring_meeting.template.draft?
 

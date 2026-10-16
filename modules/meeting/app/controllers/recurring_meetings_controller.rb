@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class RecurringMeetingsController < ApplicationController
+  include Meetings::EnabledGuard
   include Layout
   include PaginationHelper
   include OpTurbo::ComponentStream

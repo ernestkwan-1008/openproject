@@ -29,6 +29,7 @@
 #++
 
 class MeetingSectionsController < ApplicationController
+  include Meetings::EnabledGuard
   include AttachableServiceCall
   include OpTurbo::ComponentStream
   include Meetings::AgendaComponentStreams

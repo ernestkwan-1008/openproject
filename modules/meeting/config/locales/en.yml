@@ -574,6 +574,11 @@ en:
 
   project_module_meetings: "Meetings"
 
+  setting_meetings_enabled: "Enable Meetings"
+  setting_meetings_enabled_caption: >-
+    When disabled, Meetings is hidden and blocked for everybody in the whole system (menus, project modules,
+    work package tab, API and calendar feeds). Existing meetings are kept and available again once re-enabled.
+
   recurring_meeting:
     actual_first_occurrence_mismatch_html: "The first occurrence of this series will be %{first_occurrence}"
     caption:
